@@ -1,0 +1,89 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  passwordHash  String
+  role          String         @default("CUSTOMER") // SUPER_ADMIN, VENDOR, CUSTOMER
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  vendorProfile VendorProfile?
+  orders        Order[]
+}
+
+model VendorProfile {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storeName      String
+  description    String?
+  commissionRate Float    @default(10.0)
+  status         String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  products       Product[]
+  orderItems     OrderItem[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  description String?
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  vendorId    String
+  vendor      VendorProfile @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id])
+  title       String
+  description String
+  price       Float
+  stock       Int      @default(0)
+  imageUrl    String?
+  vehicleType String?  // e.g. "Car", "Motorcycle", "Truck"
+  orderItems  OrderItem[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Order {
+  id              String      @id @default(uuid())
+  customerId      String
+  customer        User        @relation(fields: [customerId], references: [id])
+  totalAmount     Float
+  status          String      @default("PENDING") // PENDING, PAID, SHIPPED, DELIVERED, CANCELLED
+  shippingAddress String
+  items           OrderItem[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model OrderItem {
+  id              String        @id @default(uuid())
+  orderId         String
+  order           Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId       String
+  product         Product       @relation(fields: [productId], references: [id])
+  vendorId        String
+  vendor          VendorProfile @relation(fields: [vendorId], references: [id])
+  quantity        Int
+  priceAtPurchase Float
+  status          String        @default("PENDING") // PENDING, SHIPPED, DELIVERED
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
